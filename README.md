@@ -1,0 +1,1 @@
+IoT-based smart onion storage monitoring system using ESP32, Blynk, Streamlit, and Python to monitor environmental conditions and predict onion freshness, helping farmers reduce spoilage and improve storage efficiency.
