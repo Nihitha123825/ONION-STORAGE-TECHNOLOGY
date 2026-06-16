@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Onion Storage Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    /* Quick inline CSS for onion animation alignment */
+    .logo {
+      display: flex;      
+      align-items: center;
+      gap: 10px;
+      font-weight: bold;
+      font-size: 20px;
+    }
+
+    .onion-animation {
+      width: 40px;
+      height: 40px;
+      object-fit: contain;
+    }
+
+    /* Popup alert box */
+    .popup {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #ff4444;
+      color: white;
+      padding: 15px 20px;
+      border-radius: 10px;
+      display: none;
+      font-weight: bold;
+      box-shadow: 0px 4px 10px rgba(0,0,0,0.2);
+      z-index: 1000;
+    }
+  </style>
+</head>
+<body>
+  <script>
+    // Redirect to login if not logged in
+    if (localStorage.getItem("loggedIn") !== "true") {
+      window.location.href = "login.html";
+    }
+  </script>
+
+  <header class="topbar">
+    <div class="logo">
+      <img src="https://media.giphy.com/media/3o6Zt6ML6BklcajjsA/giphy.gif" alt="Onion Animation" class="onion-animation" />
+      🧅 <strong>Onion Storage Technology</strong>
+    </div>
+    <div class="datetime" id="datetime"></div>
+    <button class="logout">Logout</button>
+  </header>
+
+  <main class="dashboard">
+
+    <!-- 🧾 Storage Summary -->
+    <section class="stats">
+      <div class="stat-card">Total Batches <strong>3</strong></div>
+      <div class="stat-card">Healthy Batches <strong>2</strong></div>
+      <div class="stat-card">Total Quantity <strong>7,500 kg</strong></div>
+      <div class="stat-card">Avg. Storage <strong>45 days</strong></div>
+    </section>
+
+    <!-- 🌡️ Sensor Monitoring -->
+    <section class="monitoring">
+      <h2>Environmental Monitoring</h2>
+      <div class="monitor-cards">
+        <div class="monitor-card optimal">
+          <p>🌡️ Temperature</p>
+          <strong id="temp">-- °C</strong>
+          <small>Optimal: 2–4°C</small>
+        </div>
+        <div class="monitor-card warning">
+          <p>💧 Humidity</p>
+          <strong id="hum">-- %</strong>
+          <small>Optimal: 65–70%</small>
+        </div>
+        <div class="monitor-card optimal">
+          <p>🧪 Ammonia (NH₃)</p>
+          <strong id="gas">-- ppm</strong>
+          <small>Optimal: &lt; 2 ppm</small>
+        </div>
+      </div>
+    </section>
+
+    <!-- 🧅 Batch Info -->
+    <section class="batch">
+      <h2>Batch Monitoring</h2>
+      <div class="batch-card healthy">
+        <p><strong>B001</strong> – Yellow Onions</p>
+        <p>Quantity: 2,500 kg</p>
+        <p>Days Stored: 45</p>
+        <p>Location: A</p>
+      </div>
+      <div class="batch-card warning">
+        <p><strong>B002</strong> – Red Onions</p>
+        <p>Quantity: 3,000 kg</p>
+        <p>Days Stored: 60</p>
+        <p>Location: B</p>
+      </div>
+    </section>
+
+    <!-- ⚠️ Alerts and Recommendations -->
+    <section class="alerts">
+      <h2>⚠️ Alerts & Recommendations</h2>
+      <div class="alert-card warning">
+        <p><strong>High Humidity</strong> detected. Increase ventilation in Section B.</p>
+      </div>
+      <div class="alert-card safe">
+        <p><strong>Temperature</strong> is stable across all zones.</p>
+      </div>
+      <div class="alert-card warning">
+        <p><strong>Batch B002</strong> has been stored for 60+ days. Check for sprouting.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Popup -->
+  <div id="popup" class="popup"></div>
+
+  <script src="script.js"></script>
+  <script>
+    // Show current date and time
+    const datetimeElement = document.getElementById("datetime");
+    if (datetimeElement) {
+      function updateDateTime() {
+        const now = new Date();
+        const date = now.toLocaleDateString();
+        const time = now.toLocaleTimeString();
+        datetimeElement.innerHTML = `${date}<br>${time}`;
+      }
+      updateDateTime();
+      setInterval(updateDateTime, 1000); // update every second
+    }
+
+    // Logout button functionality
+    document.querySelector(".logout").addEventListener("click", () => {
+      localStorage.removeItem("loggedIn");
+      window.location.href = "login.html";
+    });
+
+    // ========= Blynk API Integration =========
+    const token = "iRcGLs5sdIH8DCVvechYhbuurljR7L_L"; // 👈 Your Blynk token
+    const apiBase = "https://blynk.cloud/external/api/get?token=" + token;
+
+    async function fetchSensorData() {
+      try {
+        let temp = await fetch(apiBase + "&V0").then(r => r.text());
+        let hum  = await fetch(apiBase + "&V1").then(r => r.text());
+        let gas  = await fetch(apiBase + "&V2").then(r => r.text());
+
+        // Update HTML
+        document.getElementById("temp").innerText = temp + " °C";
+        document.getElementById("hum").innerText  = hum + " %";
+        document.getElementById("gas").innerText  = gas + " ppm";
+
+        // Show alerts
+        if (parseFloat(gas) > 2) showPopup("⚠️ High Ammonia! ("+gas+" ppm)");
+        if (parseFloat(temp) > 35) showPopup("🌡️ High Temperature! ("+temp+" °C)");
+        if (parseFloat(hum) > 80) showPopup("💧 High Humidity! ("+hum+" %)");
+      } catch (e) {
+        console.error("Error fetching data", e);
+      }
+    }
+
+    // Popup function
+    function showPopup(message) {
+      const popup = document.getElementById("popup");
+      popup.innerText = message;
+      popup.style.display = "block";
+      setTimeout(() => { popup.style.display = "none"; }, 4000);
+    }
+
+    // Fetch every 5 seconds
+    setInterval(fetchSensorData, 5000);
+    fetchSensorData();
+  </script>
+</body>
+</html>
